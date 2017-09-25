@@ -1,0 +1,829 @@
+<script type="text/javascript" src="http://api.map.baidu.com/getscript?v=2.0&ak=GwqcKKs8KNxkVmNw3DwrRf7DKZuq07h9&services=&t=20160708193109"
+凯因公司百度地图API密钥
+
+
+http://10.249.59.34:8080/iqis/home 
+账号：admin
+密码：qazokm
+
+http://10.249.59.33:8888/notebook/editor?type=hive 
+账号密码：guest
+
+移动认证账号
+dwzhaoruxing
+ZRX@201708
+
+
+
+
+
+1、登录模块【login.jsp】
+	登录界面——>点击登录按钮——> 调用js初步校验数据——>ajax请求【keyPair.action】——>获取RSA公钥的系数和指数(n,e)——>返回前端，调用js，用公钥的系数和指数生成公钥——>并用公钥将用户输入的密码进行加密——>加密后提交到doAuth.action——>将密码进行解密——>简单校验（排除空字符串和非法字符）——>根据用户名查找用户信息进行校验——>清空session和cookie——>将用户信息塞入session（LOGIN_USER，roleType，userName）——>返回【overleap.html】——>重定向到【index.jsp】（默认iframe初始加载【HealthInfo.jsp】）
+
+2、专线用户管理模块【Ll_UserManager.jsp ————> 加载 ll_UserApp.js】	
+	views  : ['addLlUserView','fileUpLlUserView','TreeCombo'],
+	models : ['GridModel', 'BbarComboBoxModel'],
+	stores : ['Ll_User', 'BbarComboBox'],
+	controllers : ['Ll_UserController'],
+	name : 'app',
+	launch : function() {
+		Ext.create('app.view.ViewportLl_User');
+	}
+	
+	2.1 主界面
+	【ViewportLl_User】页面主体布局(左右布局，左边查询，右边数据展现)、分页插件、(增加、删除、编辑、导入)按钮
+
+	右边数据展现:【Ll_UserController】加载数据存储模块【Ll_User】——>请求【queryLl_Users】(拼接查询条件，初始没有查询条件，查询时在condition存放条件)——>pageDao.findByNativeSQL(...)查询——>
+	"select "+tbId+" from "+tableName+" where 1=1 "+condition+ "ORDER BY "+orderProp+" "+ordStr——>
+	createSQLQuery(sql).setFirstResult(start).setMaxResults(size).list()
+	
+	2.2 查询【ViewportLl_User.js,   Ll_UserController.js】
+		【button(queryBu)】——>重新加载数据存储模块【Ll_User.js】
+
+	2.3 添加、编辑【addLlUserView.js ， Ll_UserController.js】
+		【ViewportLl_User】中的【button(add\edit)】按下触发【Ll_UserController】——>调用【onAddOrEditLl_UserClick()】——>加载【addLlUserView】——>判断是add还是edit(抓取选定行数据填到form中——>【button(addSubmit)】触发,调用【onAddOrEditLl_User()】——>提交到【saveOrupdateLl_User.action】中——>校验后调用【saveOrupdate()】存到数据库
+
+	2.4 批量删除数据【ViewportLl_User.js，Ll_UserController.js 】
+		【onDelLl_Users()】——>获取选定行的数据——>拼接IDs和Names数据——>提交到deleteLl_Users.action中——>将IDs字符串分拆到String[]——>deletes(idStrs)完成删除
+
+	2.5 导入功能【fileUpLlUserView.js,  Ll_UserController.js】
+		【onOpenImportWindow()】打开上传窗口——>校验上传文件格式——>提交到【upLoadLlUser.action】——>【importExecl()】将Excel中的数据导到实体类中——>校验数据——>保存到数据库
+
+3、监控指标模块【Warning_MonitorManager.jsp ————> 加载 app/warning_monitorApp.js】
+	Ext.application({
+			views : ['editWMView','DataRanges','wMAnalysisView'],
+			models : ['GridModel', 'BbarComboBoxModel','ComBoxModel'],
+			stores : ['WMS', 'BbarComboBox','TargetsBox','TimeType'],
+			controllers : ['Warning_monitorController'],
+			name : 'app',
+			launch : function() {
+				Ext.create('app.view.ViewWarning_monitorGrid');
+			}
+
+		});
+
+	3.1 主界面【ViewWarning_monitorGrid.js , Warning_monitorController.js】
+		初始加载WMS数据存储模块——>ajax请求queryWMs——>【findByCondition()】多条件查询
+
+	3.2 添加/编辑页面【 editWMView.js ，Warning_monitorController.js 】
+		触发【onEditClick()】——>弹出窗口【Ext.widget('editWMView')】，抓取选定行数据——>提交表单【onEditSubmit()】——>ajax提交到【editWM.action】——>在【editWM()】完成【saveOrupdate()】
+
+	3.3 阈值分析模块【 wMAnalysisView.js , Warning_monitorController.js 】
+		【button(thresholdAnalysisSubmit)】——>control层校验表单数据——>ajax提交到【wmAnalysis.action】——>在【wmAnalysis()】方法中完成阈值的技术
+
+4、监控告警记录模块【AlertInfo.jsp  ————> 加载了app/alertInfoApp.js】
+	Ext.application({
+			views : ['DataRange','handleAlertView','highchartsWindows','downAlertView'],
+			models : ['GridModel','ComBoxModel', 'BbarComboBoxModel'],
+			stores : ['AlertInfo','TargetComboBox','MonitorComboBox', 'BbarComboBox','Ll_UserComboBox'],
+			controllers : ['AlertInfoController'],
+			name : 'app',
+			launch : function() {
+				Ext.create('app.view.ViewportAlertInfo');
+			}
+		});
+
+	4.1 主界面【ViewportAlertInfo.js , highchartsWindows.js , AlertInfoController.js】
+		加载【AlertInfo.js】数据存储块——>ajax请求【queryAlertInfos】——>(与专线用户模块类似，先是拼接查询条件)通过findByNativeSQL()找出所需数据
+
+		点击 【查看】 弹出窗口显示数据图表信息
+		触发控制层的 【createdivChart()】——>ajax请求【queryRangeInfos.action】——>在【queryRangeInfos】中获取图表所需的数据(业务逻辑贼复杂，SQL语句不是一般的长，不看了)——>
+		数据塞在  【jsonResult="{xData:["+xData+"],yData:["+yData+"]}";】——>弹出highChart窗口——>渲染图表
+
+
+	4.2 查询界面【ViewportAlertInfo.js , AlertInfoController.js】
+		远程加载专线列表数据()——>【store : 'Ll_UserComboBox'】——>请求queryLl_UserCB获取数据
+		点击【查询】——>重新加载【AlertInfo.js】数据存储块——>请求【queryAlertInfos】
+
+	4.3 告警反馈【handleAlertView.js , AlertInfoController.js , ViewportAlertInfo.js】
+		【告警反馈】按钮——>触发控制层——>抓取当前选定的行——>提交到【handleFeedback.action】——>通过输出/输入流,将附件保存到服务器——>【addXlsxImport()】更新数据库附件的URL
+
+	4.4 下载【downAlertView.js , AlertInfoController.js】
+		【下载】按钮——>控制层打开【downAlertView】弹窗——>【导出】按钮——>请求downAlerts.action——>拼接查询条件——>抓取数据，动态生成Excel文档
+
+5、指标实时查看模块【RealTimeLLValues.jsp ————>  加载 app/realTimeLLValuesApp.js】
+	Ext.application({
+			views : [],
+			models : ['GridModel','ComBoxModel', 'BbarComboBoxModel'],
+			stores : ['RealtimeLL_Values','BbarComboBox'],
+			controllers : ['RealtimeLLValuesController'],
+			name : 'app',
+			launch : function() {
+				Ext.create('app.view.ViewportRealtimeLL_Value');
+			}
+		});
+
+	5.1 主界面【ViewportRealtimeLL_Value.js , RealtimeLLValuesController.js】
+		加载数据存储块【RealtimeLL_Values】——>请求【queryRealTimeLL_values】——>在【AlertInfoAction.java】中的【queryRealTimeLL_values】方法(麻蛋，还用了什么线程，不明白为什么要用线程，也没看懂怎么取数据)完成数据的取出
+
+	5.2 查询【ViewportRealtimeLL_Value.js , RealtimeLLValuesController.js】
+		重新加载加载数据存储块..............
+
+6、实时告警监控模块【HealthInfosGrid.jsp ————> ViewHealthInfosGrid.js】
+	Ext.application({
+			views : ['ViewHistoryWindow','editWhereView'],
+			models : ['ComBoxModel','GridModel'],
+			stores : ['RealtimeAlerts','Alert_Info','BbarComboBox','WMCombox','TargetComboBox'],
+			controllers : ['HealthInfosGridController'],
+			name : 'app',
+			launch : function() {
+				Ext.create('app.view.ViewHealthInfosGrid');
+			}
+
+		});
+
+	6.1 主界面【ViewHealthInfosGrid.js , HealthInfosGridController.js】
+	加载数据存储块【RealtimeAlerts.js】——>请求【queryRealTimeAlertInfo_rows】——>在【AlertInfoAction.java】中的【queryRealTimeAlertInfo_rows()】 方法（又是线程，又是不懂他在干嘛）完成数据的取出
+
+	6.2 监控条件设置【editWhereView.js ，HealthInfosGridController.js】
+	加载指标下拉框数据【请求queryTargetCB】——>按钮【editWhere_Btn】按下——>清空主表信息——>隐藏不相关的字段显示——>重新请求【queryRealTimeAlertInfo_rows】获取数据
+
+	6.3 切换地图视图【HealthInfosGridController.js  ， HealthInfosController.js】
+	触发【switchPanel()】函数——>触发【HealthInfosController.js】的【queryRealTimeAlertInfo()】方法——>请求【queryRealTimeAlertInfo】——>【initMap()】渲染地图
+
+
+----------------------------------------------------------------------------------------------------
+-------------------------------------数据库表结构---------------------------------------------------
+----------------------------------------------------------------------------------------------------
+////////////////////////////////desc account_group_tree
++------------+--------------+------+-----+---------+----------------+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| id         | int(11)      | NO   | PRI | NULL    | auto_increment |自动id	
+| group_type | int(11)      | YES  |     | NULL    |                |
+| isGroup    | bit(1)       | NO   |     | NULL    |                |
+| level      | int(11)      | YES  |     | NULL    |                |级别
+| memo       | varchar(255) | YES  |     | NULL    |                |备注
+| nodeName   | varchar(255) | NO   |     | NULL    |                |节点名
+| point      | varchar(255) | YES  |     | NULL    |                |
+| type       | int(11)      | YES  |     | NULL    |                |
+| parent_id  | int(11)      | YES  | MUL | NULL    |                |上级节点
++------------+--------------+------+-----+---------+----------------+
+select * from account_group_tree;
++----+------------+---------+-------+------+--------------+-------+------+-----------+
+| id | group_type | isGroup | level | memo | nodeName     | point | type | parent_id |
++----+------------+---------+-------+------+--------------+-------+------+-----------+
+|  1 |          0 |         |    -1 | NULL | root         | NULL  |    0 |      NULL |
+|  2 |          4 |         |     0 | NULL | 专线用户     | NULL  |    0 |         1 |
+|  3 |          4 |         |     1 | NULL | 东莞市       | NULL  |    0 |         2 |
+|  4 |          4 |         |     2 | NULL | 城区         | NULL  |    0 |         3 |
+|  5 |          4 |         |     2 | NULL | 东区         | NULL  |    0 |         3 |
++----+------------+---------+-------+------+--------------+-------+-------+----------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////desc adsl
++-------+-------------+------+-----+---------+----------------+
+| Field | Type        | Null | Key | Default | Extra          |
++-------+-------------+------+-----+---------+----------------+
+| id    | int(11)     | NO   | PRI | NULL    | auto_increment |
+| name  | varchar(20) | YES  |     | NULL    |                |传输接入方式
++-------+-------------+------+-----+---------+----------------+
+select * from adsl;
++----+----------------------------------------------------------+
+| id | name                                                     |
++----+----------------------------------------------------------+
+|  7 | 裸光纤                                                   |
+|  8 | 网线直连                                                 |
+|  9 | 裸光纤和网线直连指A、Z端之间通过光纤和                   |
+| 10 | 没有经过传输设备                                         |
++----+----------------------------------------------------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////desc alert_info;
++----------------+---------------+------+-----+---------+----------------+
+| Field          | Type          | Null | Key | Default | Extra          |
++----------------+---------------+------+-----+---------+----------------+
+| id             | int(11)       | NO   | PRI | NULL    | auto_increment |自动编号
+| alm_task_id    | int(11)       | YES  |     | NULL    |                |啥？？？？
+| bras_ip        | varchar(255)  | YES  |     | NULL    |                |专线名称
+| end_date       | datetime      | YES  |     | NULL    |                |截止时间
+| monitor_name   | varchar(255)  | YES  |     | NULL    |                |监控指标
+| online_sum     | bigint(20)    | YES  |     | NULL    |                |啥？？？？
+| start_date     | datetime      | YES  |     | NULL    |                |告警时间
+| task_threshold | bigint(20)    | YES  |     | NULL    |                |监控值
+| sum            | bigint(20)    | YES  |     | NULL    |                |告警值
+| type           | int(11)       | YES  |     | NULL    |                |
+| memo           | varchar(2000) | YES  |     | NULL    |                |告警描述
+| obj_id         | int(11)       | YES  |     | NULL    |                |
+| obj_type       | int(11)       | YES  |     | NULL    |                |
+| whys           | varchar(255)  | YES  |     | NULL    |                |
+| alert_time     | bigint(20)    | YES  |     | NULL    |                |
+| file_url       | varchar(100)  | YES  |     | NULL    |                |附件URL
+| handle         | int(11)       | YES  |     | NULL    |                |
+| handle_memo    | text          | YES  |     | NULL    |                |
++----------------+---------------+------+-----+---------+----------------+
+****************** row(直接对应系统的 监控告警记录 AlertInfo.jsp) *******************
+select * from alert_info 
+ 			id: 602479
+   alm_task_id: 2
+       bras_ip: 东莞龙杰电子有限公司
+      end_date: NULL
+  monitor_name: 本网率(一级监控)
+    online_sum: NULL
+    start_date: 2017-09-04 05:46:54
+task_threshold: 60
+           sum: 0
+          type: NULL
+          memo: 在2017-09-01 00:00-2017-09-03 00本网率由由13.44劣化至0.00%低于设定的阀值60.00%,劣化次数3
+        obj_id: 3
+      obj_type: NULL
+          whys: NULL
+    alert_time: 1504368000
+      file_url: NULL
+        handle: NULL
+   handle_memo: NULL
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////desc app_day;
++------------------+------------+------+-----+---------+----------------+
+| Field            | Type       | Null | Key | Default | Extra          |
++------------------+------------+------+-----+---------+----------------+
+| id               | bigint(20) | NO   | PRI | NULL    | auto_increment |
+| r_stattime       | int(11)    | YES  | MUL | NULL    |                |
+| statistype       | int(11)    | YES  |     | NULL    |                |
+| ll_id            | int(11)    | YES  |     | NULL    |                |
+| uiapptype        | int(11)    | YES  |     | NULL    |                |
+| uiappid          | int(11)    | YES  |     | NULL    |                |
+| ulupflow         | bigint(20) | YES  |     | NULL    |                |
+| uldownflow       | bigint(20) | YES  |     | NULL    |                |
+| ulupflowband     | int(11)    | YES  |     | NULL    |                |
+| uldownflowband   | int(11)    | YES  |     | NULL    |                |
+| uitcpconpkgs     | int(11)    | YES  |     | NULL    |                |
+| uitcpconsuc      | int(11)    | YES  |     | NULL    |                |
+| uitcpdatapkgs    | int(11)    | YES  |     | NULL    |                |
+| uitcprecon       | int(11)    | YES  |     | NULL    |                |
+| uihandshakedelay | int(11)    | YES  |     | NULL    |                |
+| uiclientdelay    | int(11)    | YES  |     | NULL    |                |
+| uiserverdelay    | int(11)    | YES  |     | NULL    |                |
++------------------+------------+------+-----+---------+----------------+
+？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？
+app_day，app_hour，country_day，country_hour，两个表的结构都一样，数据都是空的，估计是用来导数据的
+？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////desc direction_country_h（国家流向分析）;
++-----------------+--------------+------+-----+---------+----------------+
+| Field           | Type         | Null | Key | Default | Extra          |
++-----------------+--------------+------+-----+---------+----------------+
+| id              | int(11)      | NO   | PRI | NULL    | auto_increment |
+| app_id          | int(11)      | YES  |     | NULL    |                |应用ID 
+| app_type        | int(11)      | YES  |     | NULL    |                |应用类别 
+| client_delay    | int(11)      | YES  |     | NULL    |                |客户端时延
+| country_code    | varchar(255) | YES  |     | NULL    |                |国家ID 
+| fixline_id      | int(11)      | YES  |     | NULL    |                |专线ID
+| handshake_delay | int(11)      | YES  |     | NULL    |                |握手时延
+| http_delay      | int(11)      | YES  |     | NULL    |                |HTTP平均时延
+| level_2_id      | int(11)      | YES  |     | NULL    |                |专线所属地区
+| level_3_id      | int(11)      | YES  |     | NULL    |                |专线所属街镇
+| server_delay    | int(11)      | YES  |     | NULL    |                |服务端时延
+| stat_time       | datetime     | YES  |     | NULL    |                |
+| supplier_id     | int(11)      | YES  |     | NULL    |                |运营商ID
+| tcp_conpkgs     | int(11)      | YES  |     | NULL    |                |TCP连接数 
+| tcp_consuc      | int(11)      | YES  |     | NULL    |                |TCP成功连接数
+| tcp_datapkgs    | int(11)      | YES  |     | NULL    |                |//TCP数据包数 重传率的分母
+| tcp_recon       | int(11)      | YES  |     | NULL    |                |//TCP重传数 重传率的分子
+| uldown_flow     | bigint(20)   | YES  |     | NULL    |                |下行流量 7
+| ulup_flow       | bigint(20)   | YES  |     | NULL    |                |上行流量 6
+| inputrate       | int(3)       | YES  |     | NULL    |                |带宽
+| level_name      | varchar(6)   | YES  |     | NULL    |                |业务保障等级
++-----------------+--------------+------+-----+---------+----------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////desc direction_procity_h(地市流向分析)
++-----------------+------------+------+-----+---------+----------------+
+| Field           | Type       | Null | Key | Default | Extra          |
++-----------------+------------+------+-----+---------+----------------+
+| id              | int(11)    | NO   | PRI | NULL    | auto_increment |
+| app_id          | int(11)    | YES  |     | NULL    |                |应用ID
+| app_type        | int(11)    | YES  |     | NULL    |                |应用类别
+| city_id         | int(11)    | YES  |     | NULL    |                |地市ID
+| client_delay    | int(11)    | YES  |     | NULL    |                |客户端时延
+| fixline_id      | int(11)    | YES  |     | NULL    |                |专线ID
+| handshake_delay | int(11)    | YES  |     | NULL    |                |握手时延
+| http_delay      | int(11)    | YES  |     | NULL    |                |HTTP平均时延
+| level_2_id      | int(11)    | YES  |     | NULL    |                |专线所属地区
+| level_3_id      | int(11)    | YES  |     | NULL    |                |专线所属街镇
+| province_id     | int(11)    | YES  |     | NULL    |                |省份ID
+| server_delay    | int(11)    | YES  |     | NULL    |                |服务端时延
+| stat_time       | datetime   | YES  |     | NULL    |                |
+| supplier_id     | int(11)    | YES  |     | NULL    |                |运营商ID
+| tcp_conpkgs     | int(11)    | YES  |     | NULL    |                |TCP连接数
+| tcp_consuc      | int(11)    | YES  |     | NULL    |                |TCP成功连接数
+| tcp_datapkgs    | int(11)    | YES  |     | NULL    |                |TCP数据包数 重传率的分母
+| tcp_recon       | int(11)    | YES  |     | NULL    |                |
+| uldown_flow     | bigint(20) | YES  |     | NULL    |                |下行流量
+| ulup_flow       | bigint(20) | YES  |     | NULL    |                |上行流量
+| inputrate       | int(3)     | YES  |     | NULL    |                |带宽
+| level_name      | varchar(6) | YES  |     | NULL    |                |业务保障等级
++-----------------+------------+------+-----+---------+----------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////desc direction_supplier_h(运营商流向分析)
++-----------------+-------------+------+-----+---------+----------------+
+| Field           | Type        | Null | Key | Default | Extra          |
++-----------------+-------------+------+-----+---------+----------------+
+| id              | int(11)     | NO   | PRI | NULL    | auto_increment |
+| app_id          | int(11)     | YES  |     | NULL    |                |应用ID
+| app_type        | int(11)     | YES  |     | NULL    |                |应用类别
+| client_delay    | int(11)     | YES  |     | NULL    |                |客户端时延
+| cnCrc           | varchar(10) | YES  |     | NULL    |                |中国铁通
+| cnMobile        | varchar(10) | YES  |     | NULL    |                |中国移动
+| cnTelecom       | varchar(10) | YES  |     | NULL    |                |中国电信
+| cnUnicom        | varchar(10) | YES  |     | NULL    |                |中国联通
+| education       | varchar(10) | YES  |     | NULL    |                |教育网
+| fixline_id      | int(11)     | YES  |     | NULL    |                |专线ID
+| handshake_delay | int(11)     | YES  |     | NULL    |                |握手时延
+| http_delay      | int(11)     | YES  |     | NULL    |                |HTTP平均时延
+| level_2_id      | int(11)     | YES  |     | NULL    |                |专线所属地区
+| level_3_id      | int(11)     | YES  |     | NULL    |                |专线所属街镇
+| other           | varchar(10) | YES  |     | NULL    |                |其它
+| server_delay    | int(11)     | YES  |     | NULL    |                |服务端时延
+| stat_time       | datetime    | YES  |     | NULL    |                |
+| tcp_conpkgs     | int(11)     | YES  |     | NULL    |                |TCP连接数
+| tcp_consuc      | int(11)     | YES  |     | NULL    |                |TCP成功连接数
+| tcp_datapkgs    | int(11)     | YES  |     | NULL    |                |TCP数据包数 重传率的分母
+| tcp_recon       | int(11)     | YES  |     | NULL    |                |TCP重传数 重传率的分子
+| inputrate       | int(3)      | YES  |     | NULL    |                |带宽
+| level_name      | varchar(6)  | YES  |     | NULL    |                |业务保障等级
++-----------------+-------------+------+-----+---------+----------------+
+？？？？？？？？？？？？？？？？？？？？？？？
+direction_?_? 这几个表都没有数据的
+？？？？？？？？？？？？？？？？？？？？？？？
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////desc fixline_user_flow_h（专线用户流量分析 无数据）
++-----------------+-------------+------+-----+---------+----------------+
+| Field           | Type        | Null | Key | Default | Extra          |
++-----------------+-------------+------+-----+---------+----------------+
+| id              | int(11)     | NO   | PRI | NULL    | auto_increment |
+| client_delay    | int(11)     | YES  |     | NULL    |                |客户端时延
+| fixline_id      | int(11)     | YES  |     | NULL    |                |专线ID 2
+| handshake_delay | int(11)     | YES  |     | NULL    |                |握手时延
+| http_delay      | int(11)     | YES  |     | NULL    |                |服务端时延
+| level_2_id      | int(11)     | YES  |     | NULL    |                |专线所属地区
+| level_3_id      | int(11)     | YES  |     | NULL    |                |专线所属街镇
+| server_delay    | int(11)     | YES  |     | NULL    |                |服务端时延
+| stat_time       | datetime    | YES  |     | NULL    |                |
+| tcp_conpkgs     | int(11)     | YES  |     | NULL    |                |TCP连接数
+| tcp_consuc      | int(11)     | YES  |     | NULL    |                |TCP成功连接数
+| tcp_datapkgs    | int(11)     | YES  |     | NULL    |                |TCP数据包数 重传率的分母
+| tcp_recon       | int(11)     | YES  |     | NULL    |                |TCP重传数 重传率的分子
+| uldown_flow     | bigint(20)  | YES  |     | NULL    |                |下行流量
+| ulup_flow       | bigint(20)  | YES  |     | NULL    |                |上行流量
+| inputrate       | int(3)      | YES  |     | NULL    |                |带宽
+| level_name      | varchar(6)  | YES  |     | NULL    |                |业务保障等级
+| adsl            | varchar(15) | YES  |     | NULL    |                |传输接入方式
++-----------------+-------------+------+-----+---------+----------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc flow_day;flow_hour;flow_hour2;flow_minutes;flow_minutes_copy
++------------------+------------+------+-----+---------+----------------+
+| Field            | Type       | Null | Key | Default | Extra          |
++------------------+------------+------+-----+---------+----------------+
+| id               | bigint(20) | NO   | PRI | NULL    | auto_increment |
+| r_stattime       | int(11)    | YES  | MUL | NULL    |                |
+| statistype       | int(11)    | YES  |     | NULL    |                |
+| ll_id            | int(11)    | YES  |     | NULL    |                |
+| ulupflow         | bigint(20) | YES  |     | NULL    |                |
+| uldownflow       | bigint(20) | YES  |     | NULL    |                |
+| ulupflowband     | int(11)    | YES  |     | NULL    |                |
+| uldownflowband   | int(11)    | YES  |     | NULL    |                |
+| uitcpconpkgs     | int(11)    | YES  |     | NULL    |                |
+| uitcpconsuc      | int(11)    | YES  |     | NULL    |                |
+| uitcpdatapkgs    | int(11)    | YES  |     | NULL    |                |
+| uitcprecon       | int(11)    | YES  |     | NULL    |                |
+| uihandshakedelay | int(11)    | YES  |     | NULL    |                |
+| uiclientdelay    | int(11)    | YES  |     | NULL    |                |
+| uiserverdelay    | int(11)    | YES  |     | NULL    |                |
+| uihttpdelay      | int(11)    | YES  |     | NULL    |                |
++------------------+------------+------+-----+---------+----------------+
+这5个表倒是有好多数据(估计是监控数据来的吧！！！！！！！！)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc isp_day; isp_hour; isp_hour2; isp_source （都有数据）
++------------------+---------------+------+-----+---------+----------------+
+| Field            | Type          | Null | Key | Default | Extra          |
++------------------+---------------+------+-----+---------+----------------+
+| id               | bigint(20)    | NO   | PRI | NULL    | auto_increment |
+| r_stattime       | int(11)       | YES  | MUL | NULL    |                |
+| uiAppType        | int(11)       | YES  |     | NULL    |                |
+| uiAppID          | int(11)       | YES  |     | NULL    |                |
+| ll_id            | int(11)       | YES  |     | NULL    |                |
+| uiUpFlowBand     | int(11)       | YES  |     | NULL    |                |
+| uiDownFlowBand   | int(11)       | YES  |     | NULL    |                |
+| uiTcpConPkgs     | int(11)       | YES  |     | NULL    |                |
+| uiTcpConSuc      | int(11)       | YES  |     | NULL    |                |
+| uiHandshakeDelay | decimal(11,2) | YES  |     | NULL    |                |
+| uiClientDelay    | decimal(11,2) | YES  |     | NULL    |                |
+| uiServerDelay    | decimal(11,2) | YES  |     | NULL    |                |
+| uiHttpDelay      | decimal(11,2) | YES  |     | NULL    |                |
+| supplier_id      | int(11)       | YES  |     | NULL    |                |
+| traffic_up       | bigint(20)    | YES  |     | NULL    |                |
+| traffic_dn       | bigint(20)    | YES  |     | NULL    |                |
++------------------+---------------+------+-----+---------+----------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc ll_user(客户信息表————>LlUser_Manager.jsp);
++------------+--------------+------+-----+---------+----------------+
+| Field      | Type         | Null | Key | Default | Extra          |
++------------+--------------+------+-----+---------+----------------+
+| id         | int(11)      | NO   | PRI | NULL    | auto_increment |
+| adsl       | varchar(255) | YES  |     | NULL    |                |传输接入方式
+| inputrate  | int(11)      | YES  |     | NULL    |                |带宽
+| ips        | text         | YES  |     | NULL    |                |iP地址范围
+| level_2_id | int(11)      | YES  |     | NULL    |                |
+| level_3_id | int(11)      | YES  |     | NULL    |                |
+| level_name | varchar(255) | YES  |     | NULL    |                |业务保障等级
+| mem        | varchar(255) | YES  |     | NULL    |                |
+| name       | varchar(255) | YES  |     | NULL    |                |
+| outputrate | int(11)      | YES  |     | NULL    |                |
+| rowId      | int(11)      | YES  |     | NULL    |                |
+| show_ips   | varchar(255) | YES  |     | NULL    |                |
+| user_name  | varchar(255) | YES  |     | NULL    |                |客户名称
+| product    | varchar(255) | YES  |     | NULL    |                |产品号码
+| point      | varchar(255) | YES  |     | NULL    |                |
++------------+--------------+------+-----+---------+----------------+
+		id: 2135
+      adsl: GPON(FTTH)
+ inputrate: 20
+       ips: 183.238.166.252-183.238.166.252
+level_2_id: 8
+level_3_id: 34
+level_name: 普通
+       mem: NULL
+      name: 广东爱车小屋实业发展股份有限公司
+outputrate: NULL
+     rowId: 2138
+  show_ips: 183.238.166.252
+ user_name: 广东爱车小屋实业发展股份有限公司
+   product: 31221001146
+     point: 113.763434,23.043024
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc ll_user_to_ip;
++------------+------------+------+-----+---------+----------------+
+| Field      | Type       | Null | Key | Default | Extra          |
++------------+------------+------+-----+---------+----------------+
+| id         | int(11)    | NO   | PRI | NULL    | auto_increment |
+| endIp      | bigint(20) | NO   |     | NULL    |                |
+| startIp    | bigint(20) | NO   |     | NULL    |                |
+| ll_user_id | int(11)    | YES  | MUL | NULL    |                |
++------------+------------+------+-----+---------+----------------+
+取上面客户的信息
++------+------------+------------+------------+
+| id   | endIp      | startIp    | ll_user_id |
++------+------------+------------+------------+
+| 1606 | 3085870844 | 3085870844 |       2135 |
++------+------------+------------+------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc monitor_info;
++-----------+--------------+------+-----+---------+----------------+
+| Field     | Type         | Null | Key | Default | Extra          |
++-----------+--------------+------+-----+---------+----------------+
+| id        | int(11)      | NO   | PRI | NULL    | auto_increment |
+| ll_id     | int(11)      | YES  |     | NULL    |                |告警专线ID
+| ll_name   | varchar(50)  | YES  |     | NULL    |                |告警专线
+| memo      | varchar(255) | YES  |     | NULL    |                |描述
+| scope     | varchar(20)  | YES  |     | NULL    |                |监控范围
+| target    | varchar(20)  | YES  |     | NULL    |                |告警指标
+| long_time | varchar(12)  | YES  |     | NULL    |                |日期
++-----------+--------------+------+-----+---------+----------------+
+	   id: 6
+    ll_id: 2670
+  ll_name: 东莞市龙粤通讯连锁有限公司南城分公司
+     memo: 告警时超阀值占比为100%(预警设置占比为90.0%)
+    scope: 全局专线
+   target: first_delay
+long_time: 2017-01-01
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc no_alert（告警过滤————>NOAlert.jsp）;
++-------------+--------------+------+-----+---------+----------------+
+| Field       | Type         | Null | Key | Default | Extra          |
++-------------+--------------+------+-----+---------+----------------+
+| id          | int(11)      | NO   | PRI | NULL    | auto_increment |
+| filter_memo | varchar(255) | YES  |     | NULL    |                |
+| ll_id       | int(11)      | YES  |     | NULL    |                |
+| start_time  | datetime     | YES  |     | NULL    |                |
+| target      | varchar(255) | YES  |     | NULL    |                |
++-------------+--------------+------+-----+---------+----------------+
+         id: 15
+filter_memo: 域名“tlscdn.com”的DNS解析不成功，待客户内网解决
+      ll_id: 4732
+ start_time: 2017-09-05 09:14:14
+     target: dns_success_rate
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc procity_day;procity_hour;（无数据）
++-------------------------+---------------+------+-----+---------+----------------+
+| Field                   | Type          | Null | Key | Default | Extra          |
++-------------------------+---------------+------+-----+---------+----------------+
+| id                      | bigint(20)    | NO   | PRI | NULL    | auto_increment |
+| r_stattime              | int(11)       | YES  | MUL | NULL    |                |
+| provincecode            | int(11)       | YES  |     | NULL    |                |
+| citycode                | int(11)       | YES  |     | NULL    |                |
+| supplier_id             | int(11)       | YES  |     | NULL    |                |
+| ll_id                   | int(11)       | YES  |     | NULL    |                |
+| r_appType               | int(11)       | YES  |     | NULL    |                |
+| r_appID                 | int(11)       | YES  |     | NULL    |                |
+| traffic_up              | int(11)       | YES  |     | NULL    |                |
+| traffic_dn              | int(11)       | YES  |     | NULL    |                |
+| tcpcounect_count        | int(11)       | YES  |     | NULL    |                |
+| tcpsuccesscounect_count | int(11)       | YES  |     | NULL    |                |
+| shakehands_delay        | decimal(11,2) | YES  |     | NULL    |                |
+| client_delay            | decimal(11,2) | YES  |     | NULL    |                |
+| server_delay            | decimal(11,2) | YES  |     | NULL    |                |
+| http_delay              | decimal(11,2) | YES  |     | NULL    |                |
++-------------------------+---------------+------+-----+---------+----------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc role(角色表);
++----------+--------------+------+-----+---------+----------------+
+| Field    | Type         | Null | Key | Default | Extra          |
++----------+--------------+------+-----+---------+----------------+
+| id       | int(11)      | NO   | PRI | NULL    | auto_increment |
+| roleName | varchar(255) | YES  |     | NULL    |                |
+| roleType | int(11)      | NO   |     | NULL    |                |
++----------+--------------+------+-----+---------+----------------+
++----+-----------+----------+
+| id | roleName  | roleType |
++----+-----------+----------+
+|  1 | 管理员    |        1 |
+|  2 | 操作员    |        1 |
++----+-----------+----------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc service_app_h(应用分析 无数据);
++-----------------+------------+------+-----+---------+----------------+
+| Field           | Type       | Null | Key | Default | Extra          |
++-----------------+------------+------+-----+---------+----------------+
+| id              | int(11)    | NO   | PRI | NULL    | auto_increment |
+| client_delay    | int(11)    | YES  |     | NULL    |                |客户端时延 14
+| fixline_id      | int(11)    | YES  |     | NULL    |                |专线ID 2
+| handshake_delay | int(11)    | YES  |     | NULL    |                |握手时延 13
+| level_2_id      | int(11)    | YES  |     | NULL    |                |专线所属地区
+| level_3_id      | int(11)    | YES  |     | NULL    |                |专线所属街镇
+| pp_id           | int(11)    | YES  |     | NULL    |                |应用ID 4
+| pp_type         | int(11)    | YES  |     | NULL    |                |应用类别 3
+| server_delay    | int(11)    | YES  |     | NULL    |                |服务端时延 15
+| stat_time       | datetime   | YES  |     | NULL    |                |
+| tcp_conpkgs     | int(11)    | YES  |     | NULL    |                |TCP连接数 9
+| tcp_consuc      | int(11)    | YES  |     | NULL    |                |TCP成功连接数 10
+| tcp_datapkgs    | int(11)    | YES  |     | NULL    |                |TCP数据包数 重传率的分母 11
+| tcp_recon       | int(11)    | YES  |     | NULL    |                |TCP重传数 重传率的分子 12
+| uldown_flow     | bigint(20) | YES  |     | NULL    |                |下行流量 6
+| ulup_flow       | bigint(20) | YES  |     | NULL    |                |上行流量 5
+| inputrate       | int(3)     | YES  |     | NULL    |                |
+| level_name      | varchar(6) | YES  |     | NULL    |                |
++-----------------+------------+------+-----+---------+----------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc sys_user(管理员信息); sysuser_iflow(表结构与此相同，但无数据)
++-------------+--------------+------+-----+---------+----------------+
+| Field       | Type         | Null | Key | Default | Extra          |
++-------------+--------------+------+-----+---------+----------------+
+| id          | int(11)      | NO   | PRI | NULL    | auto_increment |
+| errorCount  | int(11)      | YES  |     | NULL    |                |密码输入错误次数
+| lockState   | bit(1)       | YES  |     | NULL    |                |账号是否被锁了
+| lockTime    | datetime     | YES  |     | NULL    |                |
+| lock_value  | bit(1)       | YES  |     | NULL    |                |
+| mem         | varchar(255) | YES  |     | NULL    |                |
+| name        | varchar(255) | YES  |     | NULL    |                |
+| password    | varchar(255) | YES  |     | NULL    |                |
+| purviewJson | text         | YES  |     | NULL    |                |
+| role_id     | int(11)      | YES  |     | NULL    |                |角色
++-------------+--------------+------+-----+---------+----------------+
+         id: 1
+ errorCount: 0
+  lockState:  
+   lockTime: NULL
+ lock_value: NULL
+        mem: NULL
+       name: canis
+   password: canis
+purviewJson: NULL
+    role_id: 1
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc target_analysis（告警指标分析）;
++--------------+---------------+------+-----+---------+----------------+
+| Field        | Type          | Null | Key | Default | Extra          |
++--------------+---------------+------+-----+---------+----------------+
+| id           | int(11)       | NO   | PRI | NULL    | auto_increment |
+| target_value | decimal(20,2) | YES  |     | NULL    |                |
+| ll_id        | int(11)       | YES  |     | NULL    |                |
+| r_stattime   | bigint(20)    | YES  |     | NULL    |                |
++--------------+---------------+------+-----+---------+----------------+
++----+--------------+-------+------------+
+| id | target_value | ll_id | r_stattime |
++----+--------------+-------+------------+
+|  2 |         0.00 |     1 | 1504429200 |
++----+--------------+-------+------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc target_list(监控指标————>Warning_MonitorManager.jsp);
++--------+--------------+------+-----+---------+----------------+
+| Field  | Type         | Null | Key | Default | Extra          |
++--------+--------------+------+-----+---------+----------------+
+| id     | int(11)      | NO   | PRI | NULL    | auto_increment |
+| target | varchar(255) | YES  |     | NULL    |                |
+| name   | varchar(255) | YES  |     | NULL    |                |
++--------+--------------+------+-----+---------+----------------+
++----+--------------------------+--------------------------+
+| id | target                   | name                     |
++----+--------------------------+--------------------------+
+|  2 | putrate_rate             | 带宽利用率               |
+|  3 | dns_analysis_delay       | DNS解析时延              |
+|  4 | dns_success_rate         | DNS解析成功率            |
+|  5 | tcp_all_retrans_rate     | TCP重传率                |
+|  6 | tcp_all_delay            | TCP连接时延              |
+|  7 | tcp_y_all_rate           | TCP连接成功率            |
+|  8 | tcp_all_server_delay     | TCP服务端连接时延        |
+|  9 | tcp_all_client_delay     | TCP客户端连接时延        |
+| 10 | http_first_package_delay | HTTP首包时延             |
+| 11 | http_first_web_delay     | HTTP首页时延             |
++----+--------------------------+--------------------------+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc target_values_day; target_values_hour; target_values_min;(无数据)
++------------+---------+------+-----+---------+----------------+
+| Field      | Type    | Null | Key | Default | Extra          |
++------------+---------+------+-----+---------+----------------+
+| id         | int(11) | NO   | PRI | NULL    | auto_increment |
+| value      | double  | YES  |     | NULL    |                |
+| ll_id      | int(11) | YES  |     | NULL    |                |
+| r_stattime | int(11) | YES  | MUL | NULL    |                |
+| target_id  | int(11) | YES  | MUL | NULL    |                |
+| task_id    | int(11) | YES  |     | NULL    |                |
++------------+---------+------+-----+---------+----------------
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////desc warning_monitor;  warning_monitor_copy(表结构上相比前者少了最后两个字段)
++---------------+--------------+------+-----+---------+----------------+
+| Field         | Type         | Null | Key | Default | Extra          |
++---------------+--------------+------+-----+---------+----------------+
+| id            | int(11)      | NO   | PRI | NULL    | auto_increment |
+| idle          | bit(1)       | NO   |     | NULL    |                |非工作日是否监控
+| monitor_hour  | varchar(255) | YES  |     | NULL    |                |监控时间点如8,9,10
+| proportion    | double       | YES  |     | NULL    |                |超过阀值占比
+| scope         | varchar(255) | YES  |     | NULL    |                |监控范围如0,AA,AAA。0代表全部(默认)
+| target        | varchar(255) | YES  |     | NULL    |                |监控指标
+| value         | double       | NO   |     | NULL    |                |监控范围的阀值如80,32,23
+| alert_count   | int(11)      | NO   |     | NULL    |                |告警次数
+| target_value  | varchar(255) | YES  |     | NULL    |                |监控指标值
+| state         | bit(1)       | NO   |     | NULL    |                |是否启用
+| monitor_time  | datetime     | YES  |     | NULL    |                |
+| value2        | double       | YES  |     | NULL    |                |
+| type          | int(11)      | YES  |     | NULL    |                |
+| scale_type    | int(11)      | YES  |     | NULL    |                |
+| alert_level   | int(11)      | YES  |     | NULL    |                |
+| name          | varchar(255) | YES  |     | NULL    |                |
+| reckon_type   | int(11)      | YES  |     | NULL    |                |
+| source_type   | int(11)      | YES  |     | NULL    |                |
+| symbol        | varchar(255) | YES  |     | NULL    |                |
+| warning_type  | int(11)      | YES  |     | NULL    |                |
+| worsen_nb     | int(11)      | YES  |     | NULL    |                |
+| interval_time | double       | YES  |     | NULL    |                |
+| where_value   | int(11)      | YES  |     | NULL    |                |
++---------------+--------------+------+-----+---------+----------------+
+           id: 2
+         idle:  
+ monitor_hour: NULL
+   proportion: NULL
+        scope: NULL
+       target: 本网率
+        value: 60
+  alert_count: 0
+ target_value: cross_rate
+        state: 
+ monitor_time: NULL
+       value2: NULL
+         type: 3
+   scale_type: NULL
+  alert_level: 1
+         name: 本网率(一级监控)
+  reckon_type: 2
+  source_type: 3
+       symbol: %
+ warning_type: NULL
+    worsen_nb: 3
+interval_time: 0.5
+  where_value: NULL
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////desc website(没数据);website_day(有数据);website_hour(有数据)；website_hour2(有数据)
+////////////////website_source(有数据)
++---------------------+--------------+------+-----+---------+----------------+
+| Field               | Type         | Null | Key | Default | Extra          |
++---------------------+--------------+------+-----+---------+----------------+
+| id                  | bigint(20)   | NO   | PRI | NULL    | auto_increment |
+| r_stattime          | int(11)      | YES  | MUL | NULL    |                |
+| statistype          | varchar(255) | YES  |     | NULL    |                |
+| ll_id               | int(11)      | YES  |     | NULL    |                |
+| sdomain             | varchar(255) | YES  |     | NULL    |                |网站域名 3
+| ulupflow            | bigint(20)   | YES  |     | NULL    |                |上行流量 4
+| uldownflow          | bigint(20)   | YES  |     | NULL    |                |下行流量 5
+| uiclickcount        | bigint(20)   | YES  |     | NULL    |                |访问量 6
+| uitcpconpkgs        | bigint(20)   | YES  |     | NULL    |                |TCP连接数 7
+| uitcpconsuc         | bigint(20)   | YES  |     | NULL    |                |TCP成功连接数 8
+| uitcpdatapkgs       | bigint(20)   | YES  |     | NULL    |                |TCP数据包数 重传率的分母 9
+| uitcprecon          | bigint(20)   | YES  |     | NULL    |                |TCP重传数 重传率的分子 10
+| uihandshakedelay    | bigint(20)   | YES  |     | NULL    |                |握手时延 11
+| uiclientdelay       | bigint(20)   | YES  |     | NULL    |                |客户端时延 12
+| uiserverdelay       | bigint(20)   | YES  |     | NULL    |                |服务端时延 13
+| uifirstbyteduration | bigint(20)   | YES  |     | NULL    |                |首字节加载时长 14
+| uihttpdelay         | bigint(20)   | YES  |     | NULL    |                |HTTP时延 15
+| uiloadduration      | bigint(20)   | YES  |     | NULL    |                |
+| uigetrequestcount   | bigint(20)   | YES  |     | NULL    |                |HTTP Get次数
+| uigetrespsuccount   | bigint(20)   | YES  |     | NULL    |                |HTTP Get成功次数
+| uipostrequestcount  | bigint(20)   | YES  |     | NULL    |                |HTTP post 次数
+| uipostrespsuccount  | bigint(20)   | YES  |     | NULL    |                |HTTP post 成功次数
+| uirespcount         | bigint(20)   | YES  |     | NULL    |                |网站响应次数
+| uisuccessrespcount  | bigint(20)   | YES  |     | NULL    |                |网站响应成功次数
+| uidnsanalydelay     | bigint(20)   | YES  |     | NULL    |                |DNS解析时延
+| uidnsrequestcount   | bigint(20)   | YES  |     | NULL    |                |DNS解析次数
+| uidnsrespsuccount   | bigint(20)   | YES  |     | NULL    |                |DNS解析成功次数
++---------------------+--------------+------+-----+---------+----------------+
+                 id: 2
+         r_stattime: 1500480000
+         statistype: 1
+              ll_id: 2
+            sdomain: NULL
+           ulupflow: 996116274
+         uldownflow: 2501629961
+       uiclickcount: 453431508
+       uitcpconpkgs: 52974
+        uitcpconsuc: 43923
+      uitcpdatapkgs: 2430441
+         uitcprecon: 91899
+   uihandshakedelay: 15532
+      uiclientdelay: 5323
+      uiserverdelay: 9289
+uifirstbyteduration: 11156
+        uihttpdelay: 6250
+     uiloadduration: 14619
+  uigetrequestcount: 90972
+  uigetrespsuccount: 84475
+ uipostrequestcount: 232461
+ uipostrespsuccount: 221801
+        uirespcount: 368341
+ uisuccessrespcount: 358316
+    uidnsanalydelay: 336874
+  uidnsrequestcount: 155685
+  uidnsrespsuccount: 16205
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////desc website_flow_h(表结构比上表多三个字段，无数据);
++--------------------+--------------+------+-----+---------+----------------+
+| Field              | Type         | Null | Key | Default | Extra          |
++--------------------+--------------+------+-----+---------+----------------+
+| id                 | int(11)      | NO   | PRI | NULL    | auto_increment |
+| adsl               | varchar(255) | YES  |     | NULL    |                |多的
+| click_count        | bigint(20)   | YES  |     | NULL    |                |
+| client_delay       | int(11)      | YES  |     | NULL    |                |
+| dn_srequest_count  | int(11)      | YES  |     | NULL    |                |
+| dns_analy_delay    | int(11)      | YES  |     | NULL    |                |
+| dns_respsuc_count  | int(11)      | YES  |     | NULL    |                |
+| domain             | varchar(255) | YES  |     | NULL    |                |
+| firstbyteduration  | int(11)      | YES  |     | NULL    |                |
+| fixline_id         | int(11)      | YES  |     | NULL    |                |多的
+| get_request_count  | int(11)      | YES  |     | NULL    |                |
+| get_respsuc_count  | int(11)      | YES  |     | NULL    |                |
+| handshake_delay    | int(11)      | YES  |     | NULL    |                |
+| http_delay         | int(11)      | YES  |     | NULL    |                |
+| inputrate          | int(11)      | YES  |     | NULL    |                |多的
+| level_2_id         | int(11)      | YES  |     | NULL    |                |
+| level_3_id         | int(11)      | YES  |     | NULL    |                |
+| level_name         | varchar(255) | YES  |     | NULL    |                |
+| pos_trequest_count | int(11)      | YES  |     | NULL    |                |
+| pos_trespsuc_count | int(11)      | YES  |     | NULL    |                |
+| resp_count         | int(11)      | YES  |     | NULL    |                |
+| server_delay       | int(11)      | YES  |     | NULL    |                |
+| stat_time          | datetime     | YES  |     | NULL    |                |
+| success_resp_count | int(11)      | YES  |     | NULL    |                |
+| tcp_conpkgs        | int(11)      | YES  |     | NULL    |                |
+| tcp_consuc         | int(11)      | YES  |     | NULL    |                |
+| tcp_datapkgs       | int(11)      | YES  |     | NULL    |                |
+| tcp_recon          | int(11)      | YES  |     | NULL    |                |
+| uldown_flow        | bigint(20)   | YES  |     | NULL    |                |
+| ulup_flow          | bigint(20)   | YES  |     | NULL    |                |
++--------------------+--------------+------+-----+---------+----------------+
+
+select concat(
+    'select "', 
+    TABLE_name, 
+    '", count(*) from ', 
+    TABLE_SCHEMA, 
+    '.',
+    TABLE_name,
+    ' union all'
+) from tables 
+where TABLE_SCHEMA='testdb';
+
+
+Work_Thread.java 中的静态变量含义
+public static Map<Integer,Warning_Monitor> tasks
+》》》》key为(warning_monitor表中的ID)，value为Warning_Monitor的对象
+	
+public static Map<String,List<Integer>> target_to_mmids
+》》》》key为监控指标值（warning_monitor表中的target_value），value为ID(warning_monitor表中的ID)
+	
+public static Map<Integer,Map<Integer,Unit>> map_ll_values
+》》》》key为用户的ID，value为对应的日志文件Map映射
+	
+public static Map<Integer,Ll_User> lls
+》》》》将用户信息塞到Map中，key为用户的ID，value为用户对象(ID，客户名称，产品编号和带宽，point)
+	
+public static List<Integer> list_lls
+》》》》list_lls 存放所有用户的ID
+	
+public static  Map<Integer,String> lls_point
+》》》》key为用户的ID，value为point
+	
+public static Map<String,Integer> ll_products
+》》》》key存放产品编号，value为客户Id(通过产品编号找到客户)       
+
+public static Map<String,String> targets
+》》》》key为监控指标的英文名称，value为监控指标的中文名称
+	
+public static Map<String,Integer> targetIds
+》》》》key为监控指标的英文名称，value为监控指标ID
